@@ -11,19 +11,33 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🧹 Purging old mock records, attendance, and reviews...");
 
-  // 1. Clean child and dependent tables safely
-  await prisma.attendanceRecord.deleteMany({}).catch(() => {});
-  await prisma.leaveRequest.deleteMany({}).catch(() => {});
-  await prisma.performanceReview.deleteMany({}).catch(() => {});
-  await prisma.onboardingTaskAssignment.deleteMany({}).catch(() => {});
-  await prisma.payslip.deleteMany({}).catch(() => {});
-  await prisma.salaryStructure.deleteMany({}).catch(() => {});
-  await prisma.goal.deleteMany({}).catch(() => {});
-  await prisma.feedback.deleteMany({}).catch(() => {});
-  await prisma.auditLog.deleteMany({}).catch(() => {});
-  await prisma.userRole.deleteMany({}).catch(() => {});
+  const safeDelete = async (model: any) => {
+    if (model && typeof model.deleteMany === "function") {
+      try {
+        await model.deleteMany({});
+      } catch (e) {}
+    }
+  };
 
-  // 2. Remove all non-admin employees and users
+  await safeDelete(
+    (prisma as any).leaveRequest || (prisma as any).leave_requests,
+  );
+  await safeDelete(
+    (prisma as any).performanceReview || (prisma as any).performance_reviews,
+  );
+  await safeDelete(
+    (prisma as any).onboardingTaskAssignment ||
+      (prisma as any).onboarding_task_assignments,
+  );
+  await safeDelete((prisma as any).payslip || (prisma as any).payslips);
+  await safeDelete(
+    (prisma as any).salaryStructure || (prisma as any).salary_structures,
+  );
+  await safeDelete((prisma as any).goal || (prisma as any).goals);
+  await safeDelete((prisma as any).feedback || (prisma as any).feedbacks);
+  await safeDelete((prisma as any).auditLog || (prisma as any).audit_logs);
+  await safeDelete((prisma as any).userRole || (prisma as any).user_roles);
+
   await prisma.employee.deleteMany({
     where: {
       personalEmail: { not: "admin@smarthr.local" },
@@ -82,7 +96,6 @@ async function main() {
 
   console.log("🛡️ Ensuring standard Roles (ADMIN, MANAGER, EMPLOYEE) exist...");
 
-  // The actual enum keys available in this schema:
   const targetRoles = [RoleName.ADMIN, RoleName.MANAGER, RoleName.EMPLOYEE];
 
   for (const roleVal of targetRoles) {
@@ -105,7 +118,6 @@ async function main() {
   console.log("👤 Seeding root Super Admin account (admin@smarthr.local)...");
   const hashedPassword = await bcrypt.hash("Admin@12345", 10);
 
-  // 3. Upsert User
   const adminUser = await prisma.user.upsert({
     where: { email: "admin@smarthr.local" },
     update: {
@@ -119,11 +131,17 @@ async function main() {
     },
   });
 
-  // 4. Attach ADMIN role in user_roles
   if (adminRole) {
     await prisma.userRole
-      .create({
-        data: {
+      .upsert({
+        where: {
+          userId_roleId: {
+            userId: adminUser.id,
+            roleId: adminRole.id,
+          },
+        },
+        update: {},
+        create: {
           userId: adminUser.id,
           roleId: adminRole.id,
         },
@@ -131,7 +149,6 @@ async function main() {
       .catch(() => {});
   }
 
-  // 5. Upsert Employee record using Prisma relation connection
   const existingEmployee = await prisma.employee.findFirst({
     where: { personalEmail: "admin@smarthr.local" },
   });
@@ -139,25 +156,23 @@ async function main() {
   if (!existingEmployee) {
     await prisma.employee.create({
       data: {
-        user: { connect: { id: adminUser.id } },
         employeeNumber: "EMP-000",
         firstName: "Super",
         lastName: "Admin",
         personalEmail: "admin@smarthr.local",
-        department: { connect: { id: execDept.id } },
-        designation: { connect: { id: saDesig.id } },
         isDepartmentManager: true,
         canAdminister: true,
         employmentStatus: EmploymentStatus.ACTIVE,
         employmentType: EmploymentType.FULL_TIME,
         joiningDate: new Date(),
-      } as any,
+        users: { connect: { id: adminUser.id } },
+        departments: { connect: { id: execDept.id } },
+        designations: { connect: { id: saDesig.id } },
+      },
     });
   }
 
-  console.log(
-    "✅ Database reset complete. Zero old mock cache. Only admin@smarthr.local exists.",
-  );
+  console.log("✅ Database seed complete. Super Admin created successfully.");
   console.log("🔑 Credentials: admin@smarthr.local | Admin@12345");
 }
 

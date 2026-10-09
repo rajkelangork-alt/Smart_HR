@@ -18,13 +18,12 @@ app.use(express.json());
 
 // Routes
 app.use("/api/v1", apiRouter);
+app.use("/api", apiRouter); // Add this alias so both /api and /api/v1 work cleanly
 app.use("/api/v1/analytics", analyticsRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 // Serve uploaded documents locally
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
-
-// Central API Router
-app.use("/api/v1", apiRouter);
 
 // Fallback 404 handler
 app.use((_req: Request, res: Response) => {
