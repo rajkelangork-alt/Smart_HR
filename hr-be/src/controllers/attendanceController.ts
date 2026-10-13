@@ -97,7 +97,7 @@ export class AttendanceController {
 
       if (isSuperAdmin) {
         employees = await prisma.employee.findMany({
-          include: { departments: true },
+          include: { department: true },
           orderBy: { employeeNumber: "asc" },
         });
       } else {
@@ -118,7 +118,7 @@ export class AttendanceController {
               ...(currentUserId ? [{ id: currentUserId }] : []),
             ],
           },
-          include: { departments: true },
+          include: { department: true },
         });
 
         const isManager =
@@ -131,7 +131,7 @@ export class AttendanceController {
             where: {
               departmentId: currentEmp.departmentId,
             },
-            include: { departments: true },
+            include: { department: true },
             orderBy: { employeeNumber: "asc" },
           });
         } else if (currentEmp) {
@@ -376,12 +376,10 @@ export class AttendanceController {
       });
 
       if (!record || !record.checkIn) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            error: "You have not clocked in today yet.",
-          });
+        res.status(400).json({
+          success: false,
+          error: "You have not clocked in today yet.",
+        });
         return;
       }
 

@@ -23,7 +23,7 @@ export class PerformanceController {
 
       const requesterEmp = await prisma.employee.findUnique({
         where: { userId: authUser.userId },
-        include: { departments: true },
+        include: { department: true },
       });
       const isManager = Boolean(
         requesterEmp?.isDepartmentManager || roles.includes("MANAGER"),
@@ -33,10 +33,10 @@ export class PerformanceController {
       const reviews = await prisma.performanceReview.findMany({
         include: {
           employees_performance_reviews_revieweeIdToemployees: {
-            include: { users: true, departments: true, designations: true },
+            include: { user: true, department: true, designation: true },
           },
           employees_performance_reviews_reviewerIdToemployees: {
-            include: { users: true },
+            include: { user: true },
           },
         },
         orderBy: { createdAt: "desc" },
@@ -98,12 +98,10 @@ export class PerformanceController {
       }
 
       if (targetRevieweeId === reviewerEmp.id) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            error: "Self-appraisal is strictly forbidden.",
-          });
+        res.status(400).json({
+          success: false,
+          error: "Self-appraisal is strictly forbidden.",
+        });
         return;
       }
 
@@ -118,10 +116,10 @@ export class PerformanceController {
         },
         include: {
           employees_performance_reviews_revieweeIdToemployees: {
-            include: { users: true, departments: true, designations: true },
+            include: { user: true, department: true, designation: true },
           },
           employees_performance_reviews_reviewerIdToemployees: {
-            include: { users: true },
+            include: { user: true },
           },
         },
       });
@@ -140,12 +138,10 @@ export class PerformanceController {
       });
     } catch (error: any) {
       console.error("Create review error:", error);
-      res
-        .status(500)
-        .json({
-          success: false,
-          error: error.message || "Failed to submit appraisal",
-        });
+      res.status(500).json({
+        success: false,
+        error: error.message || "Failed to submit appraisal",
+      });
     }
   }
 }

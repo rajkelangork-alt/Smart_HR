@@ -18,34 +18,32 @@ export const login = async (
     const user = await prisma.user.findUnique({
       where: { email: cleanEmail },
       include: {
-        user_roles: {
+        roles: {
           include: {
-            roles: true,
+            role: true,
           },
         },
-        employees: {
+        employee: {
           include: {
-            departments: true,
-            designations: true,
+            department: true,
+            designation: true,
           },
         },
       },
     });
 
-    if (!user || !user.isActive) {
-      res
-        .status(401)
-        .json({ success: false, error: "Invalid email or account inactive" });
+    if (!user) {
+      res.status(401).json({ success: false, message: "Invalid credentials" });
       return;
     }
 
     // Role check: Strictly 3 canonical tiers
     const isRootAdmin =
       cleanEmail === "admin@smarthr.local" ||
-      user.user_roles?.some(
-        (ur) =>
-          String(ur.roles?.name).toUpperCase() === "SUPER_ADMIN" ||
-          String(ur.roles?.name).toUpperCase() === "ADMIN",
+      user.roles?.some(
+        (ur: any) =>
+          String(ur.role?.name).toUpperCase() === "SUPER_ADMIN" ||
+          String(ur.role?.name).toUpperCase() === "ADMIN",
       );
 
     // Dynamic password strategy
@@ -61,28 +59,22 @@ export const login = async (
     // Dynamic auto-sync for legacy hashes
     if (!passwordMatches && password === standardPassword) {
       passwordMatches = true;
-      const newHash = await bcrypt.hash(standardPassword, 10);
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { passwordHash: newHash },
-      });
     }
 
     if (!passwordMatches) {
-      res
-        .status(401)
-        .json({ success: false, error: "Invalid email or password" });
+      res.status(401).json({ success: false, message: "Invalid credentials" });
       return;
     }
 
-    const roles: RoleName[] = (user.user_roles || []).map(
-      (ur) => ur.roles.name,
+    const roles: RoleName[] = (user.roles || []).map(
+      (ur: any) => ur.role?.name as RoleName,
     );
+
     const tokens = AuthService.generateTokens({
       userId: user.id,
       email: user.email,
       roles,
-      employeeId: user.employees?.id,
+      employeeId: user.employee?.id,
     });
 
     res.status(200).json({
@@ -91,8 +83,8 @@ export const login = async (
         user: {
           id: user.id,
           email: user.email,
-          roles: user.user_roles,
-          employee: user.employees,
+          roles: user.roles,
+          employee: user.employee,
         },
         ...tokens,
       },

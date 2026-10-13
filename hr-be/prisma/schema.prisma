@@ -19,8 +19,8 @@ model User {
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @default(now()) @updatedAt
   audit_logs         audit_logs[]
-  employees          Employee?
-  user_roles         UserRole[]
+  employee           Employee?
+  roles              UserRole[]
   createdEmployees   Employee[]   @relation("CreatorRelation")
 
   @@map("users")
@@ -32,8 +32,8 @@ model Role {
   description      String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @default(now()) @updatedAt
-  role_permissions role_permissions[]
-  user_roles       UserRole[]
+  permissions      role_permissions[]
+  users            UserRole[]
 
   @@map("roles")
 }
@@ -43,8 +43,8 @@ model UserRole {
   userId    String
   roleId    String
   createdAt DateTime @default(now())
-  roles     Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  users     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roleId])
   @@map("user_roles")
@@ -76,9 +76,9 @@ model Designation {
 }
 
 model Employee {
-  id                                                            String                        @id @default(uuid())
-  employeeNumber                                                String                        @unique
-  userId                                                        String                        @unique
+  id                                                            String                     @id @default(uuid())
+  employeeNumber                                                String                     @unique
+  userId                                                        String                     @unique
   firstName                                                     String
   lastName                                                      String
   avatarUrl                                                     String?
@@ -89,36 +89,36 @@ model Employee {
   nationalId                                                    String?
   joiningDate                                                   DateTime
   exitDate                                                      DateTime?
-  employmentType                                                EmploymentType                @default(FULL_TIME)
-  employmentStatus                                              EmploymentStatus              @default(PROBATION)
-  isDepartmentManager                                           Boolean                       @default(false)
-  canAdminister                                                 Boolean                       @default(false)
+  employmentType                                                EmploymentType             @default(FULL_TIME)
+  employmentStatus                                              EmploymentStatus           @default(PROBATION)
+  isDepartmentManager                                           Boolean                    @default(false)
+  canAdminister                                                 Boolean                    @default(false)
   departmentId                                                  String?
   designationId                                                 String?
   managerId                                                     String?
-  createdAt                                                     DateTime                      @default(now())
-  updatedAt                                                     DateTime                      @default(now()) @updatedAt
+  createdAt                                                     DateTime                   @default(now())
+  updatedAt                                                     DateTime                   @default(now()) @updatedAt
   addresses                                                     addresses[]
-  attendance_records                                            AttendanceRecord[]
+  attendanceRecords                                             AttendanceRecord[]
   bank_accounts                                                 bank_accounts?
-  emergency_contacts                                            emergency_contacts[]
-  employee_documents                                            employee_documents[]
-  departments                                                   Department?                   @relation(fields: [departmentId], references: [id])
-  designations                                                  Designation?                  @relation(fields: [designationId], references: [id])
-  employees                                                     Employee?                     @relation("employeesToemployees", fields: [managerId], references: [id])
-  other_employees                                               Employee[]                    @relation("employeesToemployees")
-  users                                                         User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emergencyContacts                                             emergency_contacts[]
+  employeeDocuments                                             EmployeeDocument[]
+  department                                                    Department?                @relation(fields: [departmentId], references: [id])
+  designation                                                   Designation?               @relation(fields: [designationId], references: [id])
+  manager                                                       Employee?                  @relation("EmployeeHierarchy", fields: [managerId], references: [id])
+  subordinates                                                  Employee[]                 @relation("EmployeeHierarchy")
+  user                                                          User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   feedbacks                                                     feedbacks[]
   goals                                                         goals[]
-  leave_balances                                                leave_balances[]
-  leave_requests                                                LeaveRequest[]
-  onboarding_task_assignments                                   onboarding_task_assignments[]
-  payslips                                                      payslips[]
-  performance_reviews_performance_reviews_revieweeIdToemployees PerformanceReview[]           @relation("performance_reviews_revieweeIdToemployees")
-  performance_reviews_performance_reviews_reviewerIdToemployees PerformanceReview[]           @relation("performance_reviews_reviewerIdToemployees")
-  salary_structures                                             salary_structures[]
+  leaveBalances                                                 LeaveBalance[]
+  leaveRequests                                                 LeaveRequest[]
+  onboardingTaskAssignments                                     OnboardingTaskAssignment[]
+  payslips                                                      Payslip[]
+  performance_reviews_performance_reviews_revieweeIdToemployees PerformanceReview[]        @relation("performance_reviews_revieweeIdToemployees")
+  performance_reviews_performance_reviews_reviewerIdToemployees PerformanceReview[]        @relation("performance_reviews_reviewerIdToemployees")
+  salaryStructures                                              SalaryStructure[]
   creatorId                                                     String?
-  creator                                                       User?                         @relation("CreatorRelation", fields: [creatorId], references: [id])
+  creator                                                       User?                      @relation("CreatorRelation", fields: [creatorId], references: [id])
 
   @@index([departmentId, isDepartmentManager])
   @@map("employees")
@@ -137,7 +137,7 @@ model AttendanceRecord {
   notes          String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @default(now()) @updatedAt
-  employees      Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee       Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, date])
   @@map("attendance_records")
@@ -156,8 +156,8 @@ model LeaveRequest {
   actionReason String?
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @default(now()) @updatedAt
-  employees    Employee           @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  leave_types  leave_types        @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+  employee     Employee           @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType    LeaveType          @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
 
   @@map("leave_requests")
 }
@@ -187,7 +187,7 @@ model addresses {
   postalCode String
   type       String   @default("CURRENT")
   createdAt  DateTime @default(now())
-  employees  Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 }
 
 model audit_logs {
@@ -210,7 +210,7 @@ model bank_accounts {
   branchName    String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @default(now()) @updatedAt
-  employees     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 }
 
 model emergency_contacts {
@@ -221,10 +221,10 @@ model emergency_contacts {
   phone        String
   email        String?
   isPrimary    Boolean  @default(false)
-  employees    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 }
 
-model employee_documents {
+model EmployeeDocument {
   id         String    @id @default(uuid())
   employeeId String
   name       String
@@ -232,7 +232,9 @@ model employee_documents {
   fileUrl    String
   expiryDate DateTime?
   createdAt  DateTime  @default(now())
-  employees  Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("employee_documents")
 }
 
 model feedbacks {
@@ -242,7 +244,7 @@ model feedbacks {
   comment     String
   isAnonymous Boolean  @default(false)
   createdAt   DateTime @default(now())
-  employees   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 }
 
 model goals {
@@ -255,77 +257,87 @@ model goals {
   dueDate     DateTime @db.Date
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
-  employees   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 }
 
-model leave_balances {
-  id          String      @id @default(uuid())
+model LeaveBalance {
+  id          String    @id @default(uuid())
   employeeId  String
   leaveTypeId String
   year        Int
   totalDays   Float
-  usedDays    Float       @default(0.0)
-  employees   Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  leave_types leave_types @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+  usedDays    Float     @default(0.0)
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, leaveTypeId, year])
+  @@map("leave_balances")
 }
 
-model leave_types {
-  id             String           @id @default(uuid())
-  name           String           @unique
-  daysAllowed    Int
-  carryForward   Boolean          @default(false)
-  createdAt      DateTime         @default(now())
-  leave_balances leave_balances[]
-  leave_requests LeaveRequest[]
+model LeaveType {
+  id            String         @id @default(uuid())
+  name          String         @unique
+  daysAllowed   Int
+  carryForward  Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  leaveBalances LeaveBalance[]
+  leaveRequests LeaveRequest[]
+
+  @@map("leave_types")
 }
 
-model onboarding_task_assignments {
-  id               String           @id @default(uuid())
-  taskId           String
-  employeeId       String
-  isCompleted      Boolean          @default(false)
-  completedAt      DateTime?
-  employees        Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  onboarding_tasks onboarding_tasks @relation(fields: [taskId], references: [id], onDelete: Cascade)
+model OnboardingTaskAssignment {
+  id          String         @id @default(uuid())
+  taskId      String
+  employeeId  String
+  isCompleted Boolean        @default(false)
+  completedAt DateTime?
+  employee    Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  task        OnboardingTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("onboarding_task_assignments")
 }
 
-model onboarding_tasks {
-  id                          String                        @id @default(uuid())
-  title                       String
-  description                 String?
-  createdAt                   DateTime                      @default(now())
-  onboarding_task_assignments onboarding_task_assignments[]
+model OnboardingTask {
+  id          String                     @id @default(uuid())
+  title       String
+  description String?
+  createdAt   DateTime                   @default(now())
+  assignments OnboardingTaskAssignment[]
+
+  @@map("onboarding_tasks")
 }
 
-model payroll_runs {
-  id              String     @id @default(uuid())
+model PayrollRun {
+  id              String    @id @default(uuid())
   month           Int
   year            Int
-  totalGross      Decimal    @db.Decimal(14, 2)
-  totalNet        Decimal    @db.Decimal(14, 2)
-  totalDeductions Decimal    @db.Decimal(14, 2)
-  processedDate   DateTime   @default(now())
-  status          String     @default("COMPLETED")
-  payslips        payslips[]
+  totalGross      Decimal   @db.Decimal(14, 2)
+  totalNet        Decimal   @db.Decimal(14, 2)
+  totalDeductions Decimal   @db.Decimal(14, 2)
+  processedDate   DateTime  @default(now())
+  status          String    @default("COMPLETED")
+  payslips        Payslip[]
 
   @@unique([month, year])
+  @@map("payroll_runs")
 }
 
-model payslips {
-  id           String       @id @default(uuid())
+model Payslip {
+  id           String     @id @default(uuid())
   payrollRunId String
   employeeId   String
-  basicSalary  Decimal      @db.Decimal(12, 2)
-  grossSalary  Decimal      @db.Decimal(12, 2)
-  netSalary    Decimal      @db.Decimal(12, 2)
-  deductions   Decimal      @db.Decimal(12, 2)
+  basicSalary  Decimal    @db.Decimal(12, 2)
+  grossSalary  Decimal    @db.Decimal(12, 2)
+  netSalary    Decimal    @db.Decimal(12, 2)
+  deductions   Decimal    @db.Decimal(12, 2)
   details      Json
   pdfUrl       String?
-  createdAt    DateTime     @default(now())
-  employees    Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  payroll_runs payroll_runs @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  employee     Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+
+  @@map("payslips")
 }
 
 model permissions {
@@ -342,28 +354,32 @@ model role_permissions {
   id           String      @id @default(uuid())
   roleId       String
   permissionId String
-  permissions  permissions @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  permission   permissions @relation(fields: [permissionId], references: [id], onDelete: Cascade)
   roles        Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, permissionId])
 }
 
-model salary_components {
+model SalaryComponent {
   id        String        @id @default(uuid())
   name      String        @unique
   type      ComponentType
   isTaxable Boolean       @default(true)
   createdAt DateTime      @default(now())
+
+  @@map("salary_components")
 }
 
-model salary_structures {
+model SalaryStructure {
   id            String   @id @default(uuid())
   employeeId    String
   baseSalary    Decimal  @db.Decimal(12, 2)
   effectiveDate DateTime @db.Date
   breakdown     Json
   createdAt     DateTime @default(now())
-  employees     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee      Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("salary_structures")
 }
 
 model shifts {

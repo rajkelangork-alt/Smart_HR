@@ -14,35 +14,36 @@ router.get("/roster", async (req: Request, res: Response) => {
     const users = await prisma.user.findMany({
       where: { isActive: true },
       include: {
-        user_roles: {
+        roles: {
           include: {
-            roles: true,
+            role: true,
           },
         },
-        employees: {
+        employee: {
           include: {
-            departments: true,
-            designations: true,
+            department: true,
+            designation: true,
           },
         },
       },
       orderBy: { createdAt: "asc" },
     });
 
-    const formattedRoster = users.map((u) => {
+    const formattedRoster = users.map((u: any) => {
       const cleanEmail = u.email.toLowerCase();
+      const userRoles = u.roles || [];
       const isRootAdmin =
         cleanEmail === "admin@smarthr.local" ||
-        u.user_roles?.some(
-          (ur) =>
-            String(ur.roles?.name).toUpperCase() === "SUPER_ADMIN" ||
-            String(ur.roles?.name).toUpperCase() === "ADMIN",
+        userRoles.some(
+          (ur: any) =>
+            String(ur.role?.name || "").toUpperCase() === "SUPER_ADMIN" ||
+            String(ur.role?.name || "").toUpperCase() === "ADMIN",
         );
 
       const isManager = Boolean(
-        u.employees?.isDepartmentManager ||
-        u.user_roles?.some(
-          (ur) => String(ur.roles?.name).toUpperCase() === "MANAGER",
+        u.employee?.isDepartmentManager ||
+        userRoles.some(
+          (ur: any) => String(ur.role?.name || "").toUpperCase() === "MANAGER",
         ),
       );
 
@@ -60,15 +61,15 @@ router.get("/roster", async (req: Request, res: Response) => {
         id: u.id,
         email: u.email,
         role: roleDisplay,
-        firstName: u.employees?.firstName || cleanEmail.split("@")[0],
-        lastName: u.employees?.lastName || "",
-        department: u.employees?.departments?.name || "",
+        firstName: u.employee?.firstName || cleanEmail.split("@")[0],
+        lastName: u.employee?.lastName || "",
+        department: u.employee?.department?.name || "",
         password,
       };
     });
 
     return res.status(200).json({ success: true, data: formattedRoster });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to load roster:", error);
     return res
       .status(500)

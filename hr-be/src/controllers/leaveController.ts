@@ -84,10 +84,13 @@ export class LeaveController {
       if (isSuperAdmin) {
         leaves = await prisma.leaveRequest.findMany({
           include: {
-            employees: {
-              include: { departments: true },
+            employee: {
+              include: {
+                department: true,
+                designation: true,
+                user: true,
+              },
             },
-            leave_types: true,
           },
           orderBy: { createdAt: "desc" },
         });
@@ -118,15 +121,15 @@ export class LeaveController {
         if (isManager && currentEmp?.departmentId) {
           leaves = await prisma.leaveRequest.findMany({
             where: {
-              employees: {
-                departmentId: currentEmp.departmentId,
+              employee: {
+                departmentId: currentEmp?.departmentId,
               },
             },
             include: {
-              employees: {
-                include: { departments: true },
+              employee: {
+                include: { department: true },
               },
-              leave_types: true,
+              leaveType: true,
             },
             orderBy: { createdAt: "desc" },
           });
@@ -134,10 +137,10 @@ export class LeaveController {
           leaves = await prisma.leaveRequest.findMany({
             where: { employeeId: currentEmp.id },
             include: {
-              employees: {
-                include: { departments: true },
+              employee: {
+                include: { department: true, designation: true, user: true },
               },
-              leave_types: true,
+              leaveType: true,
             },
             orderBy: { createdAt: "desc" },
           });
@@ -149,7 +152,7 @@ export class LeaveController {
           const authBy = await LeaveController.resolveLeaveAuthenticator(l);
           return {
             ...l,
-            leaveType: l.leave_types?.name || "ANNUAL",
+            leaveType: l.leaveType?.name || l.leave_types?.name || "ANNUAL",
             authenticatedBy: authBy,
           };
         }),
@@ -194,12 +197,12 @@ export class LeaveController {
 
       const { leaveType, startDate, endDate, reason } = req.body;
 
-      let typeRecord = await prisma.leave_types.findFirst({
+      let typeRecord = await prisma.leaveType.findFirst({
         where: { name: { equals: leaveType || "ANNUAL", mode: "insensitive" } },
       });
 
       if (!typeRecord) {
-        typeRecord = await prisma.leave_types.create({
+        typeRecord = await prisma.leaveType.create({
           data: {
             id: `lt-${Date.now()}`,
             name: leaveType || "ANNUAL",
@@ -247,7 +250,7 @@ export class LeaveController {
 
       const leave = await prisma.leaveRequest.findUnique({
         where: { id },
-        include: { employees: true },
+        include: { employee: true },
       });
 
       if (!leave) {
@@ -277,22 +280,18 @@ export class LeaveController {
 
       if (!isSuperAdmin) {
         if (leave.employeeId === currentEmp?.id) {
-          res
-            .status(403)
-            .json({
-              success: false,
-              error: "Managers cannot action their own leave requests.",
-            });
+          res.status(403).json({
+            success: false,
+            error: "Managers cannot action their own leave requests.",
+          });
           return;
         }
-        if (leave.employees?.departmentId !== currentEmp?.departmentId) {
-          res
-            .status(403)
-            .json({
-              success: false,
-              error:
-                "You can only action leaves for your departmental subordinates.",
-            });
+        if (leave.employee?.departmentId !== currentEmp?.departmentId) {
+          res.status(403).json({
+            success: false,
+            error:
+              "You can only action leaves for your departmental subordinates.",
+          });
           return;
         }
       }

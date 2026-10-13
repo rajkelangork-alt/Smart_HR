@@ -26,14 +26,14 @@ export class EmployeeController {
     if (emp.creatorId) {
       const creatorUser = await prisma.user.findUnique({
         where: { id: emp.creatorId },
-        include: { employees: true },
+        include: { employee: true },
       });
 
       if (creatorUser) {
         const isCreatorSuperAdmin =
           creatorUser.email.toLowerCase() === "admin@smarthr.local";
-        const creatorName = creatorUser.employees
-          ? `${creatorUser.employees.firstName} ${creatorUser.employees.lastName}`
+        const creatorName = creatorUser.employee
+          ? `${creatorUser.employee.firstName} ${creatorUser.employee.lastName}`
           : isCreatorSuperAdmin
             ? "Super Admin"
             : "Department Manager";
@@ -133,8 +133,8 @@ export class EmployeeController {
       if (!authUser || isSuperAdmin) {
         employees = await prisma.employee.findMany({
           include: {
-            departments: true,
-            designations: true,
+            department: true,
+            designation: true,
           },
           orderBy: { employeeNumber: "asc" },
         });
@@ -155,7 +155,7 @@ export class EmployeeController {
               ...(currentUserId ? [{ userId: currentUserId }] : []),
             ],
           },
-          include: { departments: true, designations: true },
+          include: { department: true, designation: true },
         });
 
         const isManager =
@@ -171,8 +171,8 @@ export class EmployeeController {
               employeeNumber: { not: "EMP-000" },
             },
             include: {
-              departments: true,
-              designations: true,
+              department: true,
+              designation: true,
             },
             orderBy: { employeeNumber: "asc" },
           });
@@ -220,8 +220,8 @@ export class EmployeeController {
       const employee = await prisma.employee.findUnique({
         where: { id },
         include: {
-          departments: true,
-          designations: true,
+          department: true,
+          designation: true,
         },
       });
 
@@ -270,12 +270,10 @@ export class EmployeeController {
       } = req.body;
 
       if (!firstName || !lastName) {
-        res
-          .status(400)
-          .json({
-            success: false,
-            error: "First name and last name are required.",
-          });
+        res.status(400).json({
+          success: false,
+          error: "First name and last name are required.",
+        });
         return;
       }
 
@@ -306,7 +304,7 @@ export class EmployeeController {
             ...(currentUserId ? [{ userId: currentUserId }] : []),
           ],
         },
-        include: { departments: true },
+        include: { department: true },
       });
 
       let effectiveDeptName = departmentName;
@@ -325,7 +323,7 @@ export class EmployeeController {
           return;
         }
         effectiveDeptId = creatorEmployee.departmentId;
-        effectiveDeptName = creatorEmployee.departments?.name;
+        effectiveDeptName = creatorEmployee.department?.name;
       }
 
       let finalDeptId = effectiveDeptId;
@@ -494,8 +492,8 @@ export class EmployeeController {
           updatedAt: new Date(),
         },
         include: {
-          departments: true,
-          designations: true,
+          department: true,
+          designation: true,
         },
       });
 
